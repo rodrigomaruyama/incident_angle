@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ângulo de incidência solar — curvas diária e anual</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+
+<style>
+  :root {
+    --bg:        #f4f1ea;
+    --bg-card:   #fbf9f4;
+    --ink:       #1a1a1a;
+    --ink-2:     #4a4a4a;
+    --ink-3:     #7a7a78;
+    --rule:      #d8d3c6;
+    --accent:    #8b3a1f;
+    --accent-2:  #c2683f;
+    --good:      #386641;
+  }
+  *  { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif; font-size: 14px;
+    line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .container { max-width: 1180px; margin: 0 auto; padding: 32px 40px 80px; }
+
+  header {
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 24px; margin-bottom: 32px;
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 24px; flex-wrap: wrap;
+  }
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 500; font-size: 30px;
+    letter-spacing: -0.02em; line-height: 1.1;
+  }
+  h1 .accent { color: var(--accent); font-style: italic; }
+  header .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--ink-3);
+    text-align: right; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  header .meta strong { color: var(--ink-2); display: block; font-weight: 600; }
+
+  .card {
+    background: var(--bg-card); border: 1px solid var(--rule);
+    padding: 24px 28px; margin-bottom: 24px;
+  }
+  .card h2 {
+    font-family: 'Fraunces', serif; font-weight: 500; font-size: 18px;
+    letter-spacing: -0.01em; margin-bottom: 16px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  .card h2 .num {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    color: var(--accent); font-weight: 600; letter-spacing: 0.1em;
+  }
+  .card h3 {
+    font-family: 'Fraunces', serif; font-weight: 500; font-size: 14px;
+    color: var(--ink-2); margin: 20px 0 10px;
+  }
+
+  .grid { display: grid; gap: 16px 20px; }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 800px) { .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 500px) { .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+
+  label {
+    display: block; font-size: 11px; color: var(--ink-3);
+    letter-spacing: 0.06em; text-transform: uppercase;
+    margin-bottom: 4px; font-weight: 500;
+  }
+  label .hint { color: var(--ink-3); text-transform: none;
+    letter-spacing: 0; font-weight: 400; opacity: 0.7; }
+
+  input[type=number], input[type=date], input[type=time], input[type=text], select {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--rule);
+    background: white; color: var(--ink);
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    border-radius: 2px; transition: border-color 0.15s;
+  }
+  input:focus, select:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(139, 58, 31, 0.1);
+  }
+  details summary {
+    cursor: pointer; font-size: 11px; color: var(--ink-3);
+    letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 8px 0; user-select: none;
+  }
+  details summary:hover { color: var(--ink); }
+  details[open] summary { margin-bottom: 12px; }
+
+  .actions {
+    display: flex; gap: 12px; align-items: center;
+    margin-top: 24px; flex-wrap: wrap;
+  }
+  button.btn {
+    background: var(--ink); color: var(--bg); border: none;
+    padding: 12px 28px;
+    font-family: 'Inter', sans-serif; font-size: 13px;
+    font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+    cursor: pointer; transition: all 0.15s;
+  }
+  button.btn:hover { background: var(--accent); }
+  button.btn.secondary {
+    background: white; color: var(--ink);
+    border: 1px solid var(--rule);
+  }
+  button.btn.secondary:hover {
+    border-color: var(--accent); color: var(--accent); background: white;
+  }
+  .step-hint {
+    font-family: 'Inter', sans-serif; font-size: 12px; color: var(--ink-3);
+    margin-left: 8px;
+  }
+
+  .stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+    border: 1px solid var(--rule); background: var(--bg-card);
+    margin-bottom: 24px;
+  }
+  .stat { padding: 18px 22px; border-right: 1px solid var(--rule); }
+  .stat:last-child { border-right: none; }
+  .stat .label {
+    font-size: 10px; color: var(--ink-3); text-transform: uppercase;
+    letter-spacing: 0.08em; margin-bottom: 6px;
+  }
+  .stat .value {
+    font-family: 'JetBrains Mono', monospace; font-size: 22px;
+    font-weight: 500; letter-spacing: -0.02em;
+  }
+  .stat .value .unit {
+    font-size: 13px; color: var(--ink-3); margin-left: 4px; font-weight: 400;
+  }
+  @media (max-width: 800px) {
+    .stats { grid-template-columns: 1fr 1fr; }
+    .stat { border-right: none; border-bottom: 1px solid var(--rule); }
+    .stat:nth-child(odd) { border-right: 1px solid var(--rule); }
+  }
+
+  .chart-section { margin-bottom: 32px; }
+  .chart-section .caption {
+    font-family: 'Fraunces', serif; font-size: 14px;
+    color: var(--ink-2); margin-top: 8px; font-style: italic;
+  }
+  .chart {
+    background: var(--bg-card); border: 1px solid var(--rule);
+    padding: 16px; min-height: 460px;
+  }
+
+  .status {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--ink-3); padding: 10px 14px;
+    border-left: 2px solid var(--rule); background: #fafaf6;
+    margin-top: 16px; white-space: pre-wrap;
+    display: none;
+  }
+  .status.show { display: block; }
+  .status.err { border-left-color: #993333; color: #993333; }
+
+  footer {
+    margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--rule);
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--ink-3); line-height: 1.7;
+  }
+  footer strong { color: var(--ink-2); }
+  footer code { color: var(--ink-2); }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Ângulo de incidência<br/><span class="accent">curvas diária e anual</span></h1>
+    <div class="meta">
+      <strong>SPA / Reda &amp; Andreas 2004</strong>
+      Cálculo no navegador
+    </div>
+  </header>
+
+  <!-- =================== ENTRADA =================== -->
+  <section class="card">
+    <h2><span class="num">01</span> Entradas do cálculo</h2>
+    <div class="grid grid-4">
+      <div>
+        <label>Latitude <span class="hint">[°]</span></label>
+        <input id="latitude" type="number" step="0.0001" value="-23.5614">
+      </div>
+      <div>
+        <label>Longitude <span class="hint">[°]</span></label>
+        <input id="longitude" type="number" step="0.0001" value="-46.7300">
+      </div>
+      <div>
+        <label>Fuso horário <span class="hint">[h]</span></label>
+        <input id="timezone" type="number" step="0.5" value="-3">
+      </div>
+      <div>
+        <label>Data</label>
+        <input id="date" type="date" value="2026-04-20">
+      </div>
+    </div>
+
+    <h3>Geometria do plano do módulo</h3>
+    <div class="grid grid-4">
+      <div>
+        <label>Inclinação do módulo <span class="hint">[°] (0=horizontal, 90=vertical)</span></label>
+        <input id="slope" type="number" step="0.1" min="0" max="90" value="20">
+      </div>
+      <div>
+        <label>Azimute da face <span class="hint">[°] (0=N, 90=E, 180=S, 270=W)</span></label>
+        <input id="azimuth" type="number" step="0.1" min="0" max="360" value="0">
+      </div>
+      <div>
+        <label>Resolução temporal <span class="hint">[min]</span></label>
+        <select id="step">
+          <option value="1">1 minuto (1440 pontos)</option>
+          <option value="5" selected>5 minutos (288 pontos)</option>
+          <option value="10">10 minutos</option>
+          <option value="15">15 minutos</option>
+          <option value="30">30 minutos</option>
+        </select>
+      </div>
+      <div>
+        <label>Hora p/ gráfico anual <span class="hint">[hh:mm local]</span></label>
+        <input id="annualHour" type="time" value="12:00">
+      </div>
+    </div>
+
+    <details>
+      <summary>Parâmetros atmosféricos avançados (raramente precisam ser mudados)</summary>
+      <div class="grid grid-4">
+        <div>
+          <label>Altitude <span class="hint">[m]</span></label>
+          <input id="elevation" type="number" step="1" value="750">
+        </div>
+        <div>
+          <label>Pressão <span class="hint">[mbar]</span></label>
+          <input id="pressure" type="number" step="1" value="930">
+        </div>
+        <div>
+          <label>Temperatura <span class="hint">[°C]</span></label>
+          <input id="temperature" type="number" step="0.1" value="20">
+        </div>
+        <div>
+          <label>Δ T <span class="hint">[s] TT−UT1</span></label>
+          <input id="deltaT" type="number" step="0.1" value="69">
+        </div>
+      </div>
+    </details>
+
+    <div class="actions">
+      <button class="btn" id="runBtn">Calcular gráficos</button>
+      <button class="btn secondary" id="resetBtn">Restaurar padrões</button>
+      <span class="step-hint" id="stepHint">Pronto para calcular os dois gráficos.</span>
+    </div>
+    <div class="status" id="status"></div>
+  </section>
+
+  <!-- =================== SAÍDA =================== -->
+  <div id="resultsRoot" class="hidden">
+    <div class="stats" id="statsBar"></div>
+
+    <section class="chart-section">
+      <div class="chart" id="incidenceChart"></div>
+      <div class="caption">Gráfico 1 — Ângulo de incidência θ no plano inclinado do gerador ao longo do dia selecionado, para a inclinação β e o azimute γ informados. Valores acima de 90° indicam que o Sol está atrás do plano do módulo, sem captação direta.</div>
+    </section>
+
+    <section class="chart-section">
+      <div class="chart" id="annualChart"></div>
+      <div class="caption" id="annualCaption">Gráfico 2 — Ângulo de incidência θ no plano inclinado ao longo do ano, mantendo fixos a hora local, a inclinação β e o azimute γ informados. Pontos cinza marcam equinócios e solstícios aproximados.</div>
+    </section>
+  </div>
+
+  <footer>
+    <strong>Método:</strong>
+    Para cada instante, o SPA calcula o zênite solar θ<sub>z</sub> e o azimute γ<sub>s</sub>.
+    O ângulo de incidência θ entre o raio solar e a normal do módulo é dado por
+    <code>cos(θ) = cos(θ<sub>z</sub>)·cos(β) + sin(θ<sub>z</sub>)·sin(β)·cos(γ<sub>s</sub>−γ<sub>m</sub>)</code>,
+    onde β é a inclinação do módulo e γ<sub>m</sub> é o azimute da face.
+    <br/>
+    <strong>Referências:</strong>
+    Reda &amp; Andreas, <em>Solar Position Algorithm for Solar Radiation Applications</em>, Solar Energy 76(5):577–589, 2004.
+    <br/>
+    <strong>Convenções:</strong>
+    Latitude negativa no hemisfério sul.
+    Longitude negativa a oeste de Greenwich.
+    Azimute: 0°=N, 90°=E, 180°=S, 270°=W.
+    Tudo calculado em hora civil local correspondente ao fuso configurado. O primeiro gráfico usa a data selecionada; o segundo usa o ano da data selecionada e a hora local informada.
+  </footer>
+
+</div>
+
+<script src="spa_tables.js"></script>
+<script src="spa.js"></script>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+
+const DEFAULTS = {
+    latitude: -23.5614, longitude: -46.73, timezone: -3,
+    date: '2026-04-20', slope: 20, azimuth: 0, step: 5, annualHour: '12:00',
+    elevation: 750, pressure: 930, temperature: 20, deltaT: 69,
+};
+
+function showStatus(msg, kind) {
+    const s = $('status');
+    s.textContent = msg;
+    s.className = 'status show' + (kind ? ' ' + kind : '');
+}
+function hideStatus() { $('status').className = 'status'; }
+
+// Convert face azimuth (0=N, 90=E, 180=S, 270=W) to SPA's azm_rotation
+// (measured from South, negative East). SPA: azm_rotation = azimuth_from_N - 180.
+function faceAzimuthToSpaAzmRotation(azFromN) {
+    let v = azFromN - 180;
+    // normalize to [-180, 180)
+    v = ((v + 180) % 360 + 360) % 360 - 180;
+    return v;
+}
+
+$('runBtn').addEventListener('click', () => {
+    const lat = +$('latitude').value;
+    const lon = +$('longitude').value;
+    const tz = +$('timezone').value;
+    const dateStr = $('date').value;
+    const slope = +$('slope').value;
+    const azFace = +$('azimuth').value;
+    const stepMin = +$('step').value;
+    const elev = +$('elevation').value;
+    const press = +$('pressure').value;
+    const temp = +$('temperature').value;
+    const dT = +$('deltaT').value;
+
+    // basic validation
+    if (!dateStr) { showStatus('Selecione uma data.', 'err'); return; }
+    if (slope < 0 || slope > 90) { showStatus('Inclinação fora de [0, 90]°.', 'err'); return; }
+    if (azFace < 0 || azFace > 360) { showStatus('Azimute fora de [0, 360]°.', 'err'); return; }
+
+    const [Y, M, D] = dateStr.split('-').map(Number);
+    const azmRotSpa = faceAzimuthToSpaAzmRotation(azFace);
+
+    const minutesInDay = 24 * 60;
+    const N = Math.floor(minutesInDay / stepMin);
+    const xLabels = [];    // Date objects for plotting
+    const zenith = [];
+    const azimuth = [];
+    const elevation = [];
+    const incidence = [];
+
+    const t0 = performance.now();
+    for (let i = 0; i < N; i++) {
+        const totalMin = i * stepMin;
+        const H = Math.floor(totalMin / 60);
+        const m = totalMin % 60;
+        const inp = window.SPA.makeSpaInput({
+            year: Y, month: M, day: D, hour: H, minute: m, second: 0,
+            timezone: tz, delta_ut1: 0, delta_t: dT,
+            longitude: lon, latitude: lat, elevation: elev,
+            pressure: press, temperature: temp, atmos_refract: 0.5667,
+            slope: slope, azm_rotation: azmRotSpa,
+        });
+        const r = window.SPA.spaCalculate(inp);
+        if (r.err !== 0) {
+            showStatus('Erro do SPA (código ' + r.err + ') em ' +
+                       H + ':' + String(m).padStart(2,'0'), 'err');
+            return;
+        }
+        const dt = new Date(Y, M-1, D, H, m, 0);
+        xLabels.push(dt);
+        zenith.push(r.zenith);
+        azimuth.push(r.azimuth);
+        elevation.push(r.elevation);
+        incidence.push(r.incidence);
+    }
+    const dtMs = performance.now() - t0;
+
+    // ---- Annual sweep: same hour, same plane, varying day across the year ----
+    const annualHourStr = $('annualHour').value;  // "HH:MM"
+    if (!annualHourStr) { showStatus('Informe a hora local para o gráfico anual.', 'err'); return; }
+    const [annH, annM] = annualHourStr.split(':').map(Number);
+    const annualDates = [];
+    const annualIncidence = [];
+    const annualZenith = [];
+    const t1 = performance.now();
+    // Generic loop over Jan 1 → Dec 31 of the same year
+    const oneDay = 24 * 3600 * 1000;
+    const start = new Date(Y, 0, 1);
+    const end   = new Date(Y, 11, 31);
+    for (let d = new Date(start); d <= end; d = new Date(d.getTime() + oneDay)) {
+        const yy = d.getFullYear(), mm = d.getMonth() + 1, dd = d.getDate();
+        const inp = window.SPA.makeSpaInput({
+            year: yy, month: mm, day: dd, hour: annH, minute: annM, second: 0,
+            timezone: tz, delta_ut1: 0, delta_t: dT,
+            longitude: lon, latitude: lat, elevation: elev,
+            pressure: press, temperature: temp, atmos_refract: 0.5667,
+            slope: slope, azm_rotation: azmRotSpa,
+        });
+        const r = window.SPA.spaCalculate(inp);
+        if (r.err !== 0) continue;
+        annualDates.push(new Date(yy, mm - 1, dd));
+        annualIncidence.push(r.incidence);
+        annualZenith.push(r.zenith);
+    }
+    const dtAnnualMs = performance.now() - t1;
+
+    showStatus(`Diário: ${N} pontos em ${dtMs.toFixed(0)} ms. Anual: ${annualDates.length} pontos em ${dtAnnualMs.toFixed(0)} ms.`);
+
+    renderResults({ xLabels, zenith, azimuth, elevation, incidence,
+                    slope, azFace, dateStr, year: Y,
+                    annualHour: annualHourStr,
+                    annualDates, annualIncidence, annualZenith });
+});
+
+function renderResults(d) {
+    $('resultsRoot').classList.remove('hidden');
+
+    // Day samples: sun above horizon
+    const dayIdx = d.zenith.map((z, i) => z < 90 ? i : -1).filter(i => i >= 0);
+    const dayIncidence = dayIdx.map(i => d.incidence[i]);
+    const dayZenith = dayIdx.map(i => d.zenith[i]);
+
+    let stats;
+    if (dayIdx.length === 0) {
+        stats = [
+            ['Mínima incidência', '—', ''],
+            ['Hora da mínima', '—', ''],
+            ['Elevação na mínima', '—', ''],
+            ['Elevação máxima do dia', '—', ''],
+        ];
+        showStatus('Não há amostras diurnas para a data, local e fuso configurados.', 'err');
+    } else {
+        const minInc = Math.min(...dayIncidence);
+        const minIdx = dayIdx[dayIncidence.indexOf(minInc)];
+        const minTime = d.xLabels[minIdx];
+        const maxElev = 90 - Math.min(...dayZenith);
+        const minElev = 90 - d.zenith[minIdx];  // elevação no momento da mínima incidência
+
+        stats = [
+            ['Mínima incidência', minInc.toFixed(2), '°'],
+            ['Hora da mínima',
+                minTime.getHours().toString().padStart(2,'0') + ':' +
+                minTime.getMinutes().toString().padStart(2,'0'), ''],
+            ['Elevação na mínima', minElev.toFixed(1), '°'],
+            ['Elevação máxima do dia', maxElev.toFixed(1), '°'],
+        ];
+    }
+    $('statsBar').innerHTML = stats.map(([lbl, val, unit]) =>
+        `<div class="stat"><div class="label">${lbl}</div>
+         <div class="value">${val}<span class="unit">${unit}</span></div></div>`
+    ).join('');
+
+    // Mask incidence with NaN when sun is below horizon
+    const incMasked = d.incidence.map((v, i) => d.zenith[i] < 90 ? v : null);
+
+    // --- Incidence chart ---
+    Plotly.newPlot('incidenceChart', [{
+        x: d.xLabels, y: incMasked,
+        mode: 'lines', line: { color: '#8b3a1f', width: 2.5 },
+        name: 'Incidência θ',
+        hovertemplate: '%{x|%H:%M}<br>θ = %{y:.2f}°<extra></extra>',
+        fill: 'tozeroy', fillcolor: 'rgba(139, 58, 31, 0.08)',
+    }], plotLayout(`Ângulo de incidência θ [°]    ·    β = ${d.slope}°, γ = ${d.azFace}° (${cardinalDir(d.azFace)})`), plotConfig());
+
+
+    // --- Annual chart ---
+    // Mask night samples (sun below horizon at the requested time)
+    const annIncMasked = d.annualIncidence.map((v, i) => d.annualZenith[i] < 90 ? v : null);
+    const nNightAnnual = d.annualZenith.filter(z => z >= 90).length;
+
+    // Build markers for equinoxes and solstices (approximate dates)
+    const Y = d.year;
+    const milestones = [
+        { date: new Date(Y, 2, 20),  name: 'equinócio mar' },
+        { date: new Date(Y, 5, 21),  name: 'solstício jun' },
+        { date: new Date(Y, 8, 23),  name: 'equinócio set' },
+        { date: new Date(Y, 11, 21), name: 'solstício dez' },
+    ];
+    // Find the y-value at each milestone date (closest day)
+    const findValue = (target) => {
+        let bestI = 0, bestDt = Infinity;
+        for (let i = 0; i < d.annualDates.length; i++) {
+            const diff = Math.abs(d.annualDates[i].getTime() - target.getTime());
+            if (diff < bestDt) { bestDt = diff; bestI = i; }
+        }
+        return { x: d.annualDates[bestI], y: annIncMasked[bestI], label: bestI };
+    };
+    const mPoints = milestones.map(m => ({ ...findValue(m.date), name: m.name }))
+                              .filter(p => p.y != null);
+
+    const traces = [{
+        x: d.annualDates, y: annIncMasked,
+        mode: 'lines', line: { color: '#8b3a1f', width: 2.5 },
+        name: `θ às ${d.annualHour}`,
+        hovertemplate: '%{x|%d %b}<br>θ = %{y:.2f}°<extra></extra>',
+        fill: 'tozeroy', fillcolor: 'rgba(139, 58, 31, 0.08)',
+    }];
+    if (mPoints.length) {
+        traces.push({
+            x: mPoints.map(p => p.x),
+            y: mPoints.map(p => p.y),
+            mode: 'markers+text',
+            marker: { color: '#7a7a78', size: 8, symbol: 'circle' },
+            text: mPoints.map(p => p.name),
+            textposition: 'top center',
+            textfont: { family: 'JetBrains Mono', size: 10, color: '#4a4a4a' },
+            hovertemplate: '%{text}<br>%{x|%d %b}<br>θ = %{y:.2f}°<extra></extra>',
+            showlegend: false,
+        });
+    }
+    const annualLayout = plotLayout(`Ângulo de incidência θ [°]    ·    β = ${d.slope}°, γ = ${d.azFace}° (${cardinalDir(d.azFace)}), ${d.annualHour} local, ano ${Y}`);
+    annualLayout.xaxis.tickformat = '%b';
+    annualLayout.xaxis.dtick = 'M1';   // monthly ticks
+    Plotly.newPlot('annualChart', traces, annualLayout, plotConfig());
+
+    // Update caption with night-sample count
+    const cap = $('annualCaption');
+    if (nNightAnnual > 0) {
+        cap.textContent = `Variação do θ ao longo do ano às ${d.annualHour} local. ` +
+            `Pontos cinza marcam equinócios e solstícios. ` +
+            `Em ${nNightAnnual} dia(s), o Sol está abaixo do horizonte neste horário ` +
+            `(curva interrompida).`;
+    } else {
+        cap.textContent = `Variação do θ ao longo do ano às ${d.annualHour} local. ` +
+            `Pontos cinza marcam equinócios e solstícios.`;
+    }
+}
+
+function cardinalDir(az) {
+    const a = ((az % 360) + 360) % 360;
+    const dirs = ['N','NE','E','SE','S','SW','W','NW'];
+    return dirs[Math.round(a / 45) % 8];
+}
+
+function plotLayout(yLabel) {
+    return {
+        margin: { l: 60, r: 24, t: 16, b: 56 },
+        height: 440,
+        paper_bgcolor: '#fbf9f4',
+        plot_bgcolor: '#fbf9f4',
+        font: { family: 'Inter, -apple-system, sans-serif', size: 12, color: '#1a1a1a' },
+        xaxis: {
+            gridcolor: '#e8e3d6', linecolor: '#7a7a78',
+            tickfont: { family: 'JetBrains Mono', size: 11 },
+            tickformat: '%H:%M', dtick: 3600000 * 2,
+            showspikes: true, spikecolor: '#c2683f',
+            spikethickness: 1, spikedash: 'dot', spikemode: 'across',
+        },
+        yaxis: {
+            title: { text: yLabel, font: { family: 'Fraunces, serif', size: 13, color: '#4a4a4a' } },
+            gridcolor: '#e8e3d6', linecolor: '#7a7a78',
+            tickfont: { family: 'JetBrains Mono', size: 11 },
+        },
+        showlegend: false,
+        hovermode: 'x unified',
+        hoverlabel: { bgcolor: '#1a1a1a',
+                      font: { family: 'JetBrains Mono', size: 11, color: '#f4f1ea' } },
+    };
+}
+
+function plotConfig() {
+    return {
+        displaylogo: false, responsive: true,
+        modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+    };
+}
+
+$('resetBtn').addEventListener('click', () => {
+    for (const k of Object.keys(DEFAULTS)) {
+        if ($(k)) $(k).value = DEFAULTS[k];
+    }
+    hideStatus();
+});
+</script>
+</body>
+</html>
